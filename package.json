@@ -1,0 +1,19 @@
+{
+  "name": "edx-api-server",
+  "version": "1.0.0",
+  "description": "A server to use edx.org as an API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cs10/edx-api-server.git"
+  },
+  "author": "Michael Ball",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/cs10/edx-api-server/issues"
+  },
+  "homepage": "https://github.com/cs10/edx-api-server#readme"
+}
