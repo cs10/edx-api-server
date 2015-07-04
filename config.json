@@ -1,0 +1,19 @@
+{
+    "defaults": {
+        "domain": "https://courses.edx.org",
+        "courses": {
+            "edx": "BerkeleyX/BJC.1x/3T2015",
+            "edge": "BerkeleyX/BJC2.prep.x/2014"
+        }
+    },
+    "domain-alias": {
+        "edx": "https://courses.edx.org",
+        "edge": "https://edge.edx.org"
+    },
+    "public-endpoints": [
+        
+    ],
+    "require-header-auth": [
+        
+    ]
+}
