@@ -16,13 +16,19 @@ var base = 'https://courses.edx.org';
 cookieJar = request.jar();
 
 function loginToEdx(req, res, next) {
-    // var course = req.query.course;
     var opts = {
         method: 'GET',
         url: base + '/login',
         jar: cookieJar
     };
     request(opts, function(loginErr, logRes, loginBody) {
+        if (loginErr || logRes.statusCode > 200) {
+            res.json({
+                "Error": loginErr || 'Unknown edX Error',
+                "Code": logRes.statusCode
+            });
+            res.end(logRes.statusCode);
+        }
         console.log('Login Page: ', logRes.statusCode);
         var csrf = cookieJar._jar.store.idx['courses.edx.org']['/'].csrftoken.value;
         var loginParams = {
@@ -33,35 +39,63 @@ function loginToEdx(req, res, next) {
                 'X-CSRFToken': csrf,
                 'Referer': base + '/login'
             },
+            // TODO: Factor this out...
             formData: {
                 email: process.env.EDX_ORG_USERNAME,
                 password: process.env.EDX_ORG_PASSWORD
             }
         };
         console.log('');
-        console.log(loginParams);
         request(loginParams, function(postErr, postRes, postBody) {
             console.log('LOGGED IN!');
             console.log(postRes.statusCode);
-            console.log(postRes);
             next();
         })
     })
 }
 
 function getCourseEnrollment(req, res) {
-    enrollment = {
-        method: 'GET',
-        url: base + '/courses/BerkeleyX/BJC.1x/3T2015/instructor#view-course_info',
-        jar: cookieJar
+    // fixme -- query default.
+    var courses = req.query.course || 'BerkeleyX/BJC.1x/3T2015';
+    // TODO: Learn promises. End Callback hell.
+    if (courses.constructor == String) {
+        courses = [ courses ];
     }
-    test = request(enrollment, function(err, resp, body) {
-        console.log('SECOND RESPONE!');
-        console.log(resp.statusCode);
-        var $ = cheerio.load(body);
-        var data = $('tr>td', '.enrollment-wrapper');
-        res.json($(data['9']).text())
-    })
+    
+    var resultData = {
+    
+    };
+    var TOTAL = courses.length;
+    var responses = 0;
+    courses.forEach(function courseDatsReq(course) {
+        var enrollment = {
+            method: 'GET',
+            url: base + '/courses/' + course +  '/instructor#view-course_info',
+            jar: cookieJar
+        }
+        request(enrollment, function(err, resp, body) {
+            responses += 1;
+            console.log('COURSE ' + course + ' RESPONE!');
+            console.log(resp.statusCode);
+            var $ = cheerio.load(body);
+            // TODO: Make this more robust.
+            var data = $('tr>td', '.enrollment-wrapper');
+            console.log('Enrollment: ');
+            var count = parseInt($(data['9']).text());
+            resultData[course] = count;
+            console.log(resultData);
+            if (responses == TOTAL) {
+                res.header('Content-type', 'application/json');
+                res.send(JSON.stringify(resultData));
+                res.status(200).end();
+            }
+        });
+    });
 }
+
+// TODO: URL builder function...
+
+
+
 
 module.exports = router;
