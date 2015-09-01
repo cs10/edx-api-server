@@ -29,7 +29,6 @@ function loginToEdx(req, res, next) {
             });
             res.end(logRes.statusCode);
         }
-        console.log('Login Page: ', logRes.statusCode);
         var csrf = cookieJar._jar.store.idx['courses.edx.org']['/'].csrftoken.value;
         var loginParams = {
             method: 'POST',
@@ -45,10 +44,7 @@ function loginToEdx(req, res, next) {
                 password: process.env.EDX_ORG_PASSWORD
             }
         };
-        console.log('');
         request(loginParams, function(postErr, postRes, postBody) {
-            console.log('LOGGED IN!');
-            console.log(postRes.statusCode);
             next();
         })
     })
@@ -61,9 +57,9 @@ function getCourseEnrollment(req, res) {
     if (courses.constructor == String) {
         courses = [ courses ];
     }
-    
+
     var resultData = {
-    
+
     };
     var TOTAL = courses.length;
     var responses = 0;
@@ -75,15 +71,11 @@ function getCourseEnrollment(req, res) {
         }
         request(enrollment, function(err, resp, body) {
             responses += 1;
-            console.log('COURSE ' + course + ' RESPONE!');
-            console.log(resp.statusCode);
             var $ = cheerio.load(body);
             // TODO: Make this more robust.
             var data = $('tr>td', '.enrollment-wrapper');
-            console.log('Enrollment: ');
             var count = parseInt($(data['9']).text());
             resultData[course] = count;
-            console.log(resultData);
             if (responses == TOTAL) {
                 res.header('Content-type', 'application/json');
                 res.send(JSON.stringify(resultData));
