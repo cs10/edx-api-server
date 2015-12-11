@@ -3,7 +3,9 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+    res.render('index', { 
+        title: 'Express'
+    });
 });
 
 router.get('/course-enrollment-total', [loginToEdx, getCourseEnrollment]);
@@ -12,6 +14,7 @@ var request = require('request');
 var cheerio = require('cheerio');
 
 var base = 'https://courses.edx.org';
+var insightsBase = 'https://insights.edx.org';
 
 cookieJar = request.jar();
 
@@ -22,6 +25,8 @@ function loginToEdx(req, res, next) {
         jar: cookieJar
     };
     request(opts, function(loginErr, logRes, loginBody) {
+        var csrf, loginParams;
+        
         if (loginErr || logRes.statusCode > 200) {
             res.json({
                 "Error": loginErr || 'Unknown edX Error',
@@ -29,10 +34,10 @@ function loginToEdx(req, res, next) {
             });
             res.end(logRes.statusCode);
         }
-        var csrf = cookieJar._jar.store.idx['courses.edx.org']['/'].csrftoken.value;
-        var loginParams = {
+        csrf = cookieJar._jar.store.idx['courses.edx.org']['/'].csrftoken.value;
+        loginParams = {
             method: 'POST',
-            url: base + '/login_ajax',
+            url: base + '/user_api/v1/account/login_session/',
             jar: cookieJar,
             headers: {
                 'X-CSRFToken': csrf,
@@ -46,8 +51,8 @@ function loginToEdx(req, res, next) {
         };
         request(loginParams, function(postErr, postRes, postBody) {
             next();
-        })
-    })
+        });
+    });
 }
 
 function getCourseEnrollment(req, res) {
@@ -58,25 +63,26 @@ function getCourseEnrollment(req, res) {
         courses = [ courses ];
     }
 
-    var resultData = {
+    var resultData = {},
+        TOTAL = courses.length,
+        responses = 0;
 
-    };
-    var TOTAL = courses.length;
-    var responses = 0;
     courses.forEach(function courseDatsReq(course) {
         var enrollment = {
             method: 'GET',
-            url: base + '/courses/' + course +  '/instructor#view-course_info',
+            url: insightsBase + '/courses/' + course +  '/enrollment/activity',
             jar: cookieJar
-        }
+        };
         request(enrollment, function(err, resp, body) {
             responses += 1;
-            var $ = cheerio.load(body);
+            var $ = cheerio.load(body),
             // TODO: Make this more robust.
-            var data = $('tr>td', '.enrollment-wrapper');
-            var count = parseInt($(data['9']).text());
-            resultData[course] = count;
-            if (responses == TOTAL) {
+                data = $('.summary-point-number');
+            // data is 4 items of enrollment types.
+            // The first is "total enrollment"
+            number = data[0].children[0].data;
+            resultData[course] = number;
+            if (responses === TOTAL) {
                 res.header('Content-type', 'application/json');
                 res.send(JSON.stringify(resultData));
                 res.status(200).end();
