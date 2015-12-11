@@ -56,8 +56,7 @@ function loginToEdx(req, res, next) {
 }
 
 function getCourseEnrollment(req, res) {
-    // fixme -- query default.
-    var courses = req.query.course || 'BerkeleyX/BJC.1x/3T2015';
+    var courses = req.query.course || ['BerkeleyX/BJC.2x/3T2015'];
     // TODO: Learn promises. End Callback hell.
     if (courses.constructor == String) {
         courses = [ courses ];
@@ -73,15 +72,18 @@ function getCourseEnrollment(req, res) {
             url: insightsBase + '/courses/' + course +  '/enrollment/activity',
             jar: cookieJar
         };
+        
         request(enrollment, function(err, resp, body) {
+            var $, data, number;
             responses += 1;
-            var $ = cheerio.load(body),
+            
+            $ = cheerio.load(body),
             // TODO: Make this more robust.
-                data = $('.summary-point-number');
+            data = $('.summary-point-number');
+            // console.log(body);
             // data is 4 items of enrollment types.
             // The first is "total enrollment"
-            number = data[0].children[0].data;
-            resultData[course] = number;
+            resultData[course] = data[0].children[0].data;
             if (responses === TOTAL) {
                 res.header('Content-type', 'application/json');
                 res.send(JSON.stringify(resultData));
